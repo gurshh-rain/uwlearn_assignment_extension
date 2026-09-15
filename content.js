@@ -3,6 +3,9 @@
 
   const ROOT_ID = "uw-learn-assignment-dashboard";
   const CROSSED_STORAGE_KEY = "crossedAssignments";
+  const CALENDAR_CONSENT_KEY = "calendarDataConsentVersion";
+  const CALENDAR_CONSENT_VERSION = 1;
+  const PRIVACY_POLICY_URL = "https://github.com/gurshh-rain/uwlearn_assignment_extension/blob/main/PRIVACY.md";
   const FALLBACK_VERSIONS = { lp: "1.44", le: "1.67" };
   const state = { collapsed: false, loading: false, assignments: [], crossed: new Set() };
 
@@ -14,6 +17,7 @@
 
   const header = document.createElement("header");
   const headingWrap = document.createElement("div");
+  headingWrap.className = "uw-learn-heading";
   const eyebrow = document.createElement("span");
   const heading = document.createElement("h2");
   eyebrow.className = "uw-learn-eyebrow";
@@ -26,7 +30,7 @@
   const refreshButton = makeButton("Refresh", "Refresh assignments");
   const calendarWrap = document.createElement("div");
   calendarWrap.className = "uw-learn-calendar-wrap";
-  const exportButton = makeButton("Add to calendar", "Choose a calendar export option");
+  const exportButton = makeButton("Calendar", "Choose a calendar export option");
   exportButton.disabled = true;
   exportButton.setAttribute("aria-expanded", "false");
   const calendarMenu = document.createElement("div");
@@ -334,7 +338,7 @@
     const overdue = remaining.length - upcoming.length;
     const completed = state.assignments.filter(isCompleted).length;
     exportButton.disabled = !dated.length;
-    exportButton.textContent = dated.length ? `Add to calendar (${dated.length})` : "Add to calendar";
+    exportButton.textContent = dated.length ? `Calendar (${dated.length})` : "Calendar";
     summary.append(
       makeStat(upcoming.length, "upcoming"),
       makeStat(overdue, "overdue"),
@@ -411,11 +415,109 @@
     return `/d2l/lms/dropbox/user/folder_submit_files.d2l?${params}`;
   }
 
+  function hasCalendarConsent() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(CALENDAR_CONSENT_KEY, (result) => {
+        resolve(
+          !chrome.runtime.lastError &&
+          result?.[CALENDAR_CONSENT_KEY] === CALENDAR_CONSENT_VERSION
+        );
+      });
+    });
+  }
+
+  function saveCalendarConsent() {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [CALENDAR_CONSENT_KEY]: CALENDAR_CONSENT_VERSION }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  async function ensureCalendarConsent() {
+    if (await hasCalendarConsent()) return true;
+    if (!(await requestCalendarConsent())) return false;
+    try {
+      await saveCalendarConsent();
+      return true;
+    } catch {
+      message.className = "uw-learn-message uw-learn-error";
+      message.textContent = "Calendar consent could not be saved.";
+      return false;
+    }
+  }
+
+  function requestCalendarConsent() {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.id = "uw-learn-calendar-consent";
+      const dialog = document.createElement("div");
+      dialog.className = "uw-learn-consent-dialog";
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-modal", "true");
+      dialog.setAttribute("aria-labelledby", "uw-learn-consent-title");
+
+      const title = document.createElement("h3");
+      title.id = "uw-learn-consent-title";
+      title.textContent = "Share assignment data with the calendar service?";
+      const explanation = document.createElement("p");
+      explanation.textContent = "To create and update your private subscribed calendar, the extension sends the following data to its Cloudflare-hosted service:";
+      const fields = document.createElement("ul");
+      for (const field of ["Assignment names", "Course names", "Due dates", "Links back to assignments in LEARN"]) {
+        const item = document.createElement("li");
+        item.textContent = field;
+        fields.append(item);
+      }
+      const retention = document.createElement("p");
+      retention.textContent = "The service stores this data for up to one year after the last update. Anyone who obtains the random private feed URL can view its calendar contents. Google Calendar receives the same contents when you subscribe.";
+      const excluded = document.createElement("p");
+      excluded.textContent = "Your Waterloo password, identity, grades, submitted files, submission status, and manual Done selections are not sent.";
+      const privacy = document.createElement("a");
+      privacy.href = PRIVACY_POLICY_URL;
+      privacy.target = "_blank";
+      privacy.rel = "noopener noreferrer";
+      privacy.textContent = "Read the full privacy policy";
+
+      const actions = document.createElement("div");
+      actions.className = "uw-learn-consent-actions";
+      const cancel = makeButton("Cancel", "Cancel calendar data sharing");
+      const accept = makeButton("Continue to Google Calendar", "Consent and continue to Google Calendar");
+      accept.className = "uw-learn-consent-accept";
+      actions.append(cancel, accept);
+      dialog.append(title, explanation, fields, retention, excluded, privacy, actions);
+      overlay.append(dialog);
+      document.body.append(overlay);
+
+      const previousFocus = document.activeElement;
+      const finish = (accepted) => {
+        document.removeEventListener("keydown", onKeyDown);
+        overlay.remove();
+        previousFocus?.focus();
+        resolve(accepted);
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape") finish(false);
+      };
+      cancel.addEventListener("click", () => finish(false));
+      accept.addEventListener("click", () => finish(true));
+      overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) finish(false);
+      });
+      document.addEventListener("keydown", onKeyDown);
+      accept.focus();
+    });
+  }
+
   async function createGoogleCalendar() {
     const assignments = calendarAssignments();
     if (!assignments.length) return;
 
     setCalendarMenu(false);
+    if (!(await ensureCalendarConsent())) return;
     googleButton.disabled = true;
     message.className = "uw-learn-message";
     message.textContent = "Preparing your private Google Calendar feed…";
@@ -439,6 +541,7 @@
   }
 
   async function syncCalendarFeed() {
+    if (!(await hasCalendarConsent())) return;
     const assignments = calendarAssignments();
     if (!assignments.length) return;
     try {

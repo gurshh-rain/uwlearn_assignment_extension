@@ -73,7 +73,7 @@ If some courses cannot be read, the panel displays the number that failed while 
 
 ## Calendar options
 
-Select **Add to calendar** in the assignment panel, then choose:
+Select **Calendar** in the assignment panel, then choose:
 
 - **iCalendar download** to save every dated assignment in one `.ics` file.
 - **Google Calendar** to publish a private calendar feed and open Google Calendar with the subscription ready to add.
@@ -88,4 +88,6 @@ The `calendar-service` directory contains a Cloudflare Worker and D1 service des
 
 ## Calendar-feed privacy
 
-The service stores assignment names, course names, due dates, and LEARN assignment links. Each feed has a random 192-bit public identifier, and its separate update token remains in browser extension storage. Anyone who obtains the feed URL can read that calendar, so users should treat it as private. Feeds expire one year after their last update and are removed by a daily cleanup job.
+Before the first hosted calendar upload, the extension displays the data it will send and requires affirmative consent. The service stores assignment names, course names, due dates, and LEARN assignment links. Each feed has a random 192-bit public identifier, and its separate update token remains in browser extension storage. Anyone who obtains the feed URL can read that calendar, so users should treat it as private. Feeds expire one year after their last update and are removed by a daily cleanup job.
+
+See the full [Privacy Policy](PRIVACY.md).
