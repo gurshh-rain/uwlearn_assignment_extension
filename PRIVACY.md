@@ -8,7 +8,7 @@ Waterloo LEARN Assignment Dashboard is an independent browser extension that con
 
 While the user is signed in to Waterloo LEARN, the extension reads course names, assignment names, due dates, and assignment submission status through Waterloo LEARN's Brightspace APIs. This information is used to display the assignment dashboard. The extension does not request, read, or store the user's Waterloo password.
 
-Manual Done selections are stored in browser extension storage. A private calendar-feed identifier and update token are also stored there after the user enables Google Calendar integration.
+Manual Done selections and assignment notes are stored in browser extension storage. A private calendar-feed identifier and update token are also stored there after the user enables Google Calendar integration.
 
 ## Hosted calendar data
 
@@ -21,7 +21,7 @@ If the user consents and chooses Google Calendar, the extension sends these fiel
 - Due dates
 - Links to assignment pages on Waterloo LEARN
 
-The hosted service does not receive the user's name, email address, Waterloo password, grades, submitted files, assignment submission status, or manual Done selections.
+The hosted service does not receive the user's name, email address, Waterloo password, grades, submitted files, assignment submission status, manual Done selections, or assignment notes.
 
 ## Purpose and sharing
 
@@ -45,7 +45,7 @@ Uninstalling the extension stops future updates but does not immediately remove 
 
 - Access to `learn.uwaterloo.ca` is used only to read assignment information available in the user's existing LEARN session and add the dashboard to that site.
 - Access to the configured `workers.dev` calendar service is used only after calendar consent to create and update the private feed.
-- Browser storage is used for manual Done selections, the consent version, and private feed metadata.
+- Browser storage is used for manual Done selections, assignment notes, the selected dashboard view, the consent version, and private feed metadata.
 
 ## Changes
 

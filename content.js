@@ -3,11 +3,22 @@
 
   const ROOT_ID = "uw-learn-assignment-dashboard";
   const CROSSED_STORAGE_KEY = "crossedAssignments";
+  const NOTES_STORAGE_KEY = "assignmentNotes";
+  const VIEW_STORAGE_KEY = "dashboardView";
   const CALENDAR_CONSENT_KEY = "calendarDataConsentVersion";
   const CALENDAR_CONSENT_VERSION = 1;
   const PRIVACY_POLICY_URL = "https://github.com/gurshh-rain/uwlearn_assignment_extension/blob/main/PRIVACY.md";
   const FALLBACK_VERSIONS = { lp: "1.44", le: "1.67" };
-  const state = { collapsed: false, loading: false, assignments: [], crossed: new Set() };
+  const state = {
+    collapsed: false,
+    loading: false,
+    assignments: [],
+    crossed: new Set(),
+    notes: {},
+    editingNoteKey: null,
+    view: "list",
+    calendarMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  };
 
   if (document.getElementById(ROOT_ID)) return;
 
@@ -30,7 +41,7 @@
   const refreshButton = makeButton("Refresh", "Refresh assignments");
   const calendarWrap = document.createElement("div");
   calendarWrap.className = "uw-learn-calendar-wrap";
-  const exportButton = makeButton("Calendar", "Choose a calendar export option");
+  const exportButton = makeButton("Export", "Choose a calendar export option");
   exportButton.disabled = true;
   exportButton.setAttribute("aria-expanded", "false");
   const calendarMenu = document.createElement("div");
@@ -49,14 +60,26 @@
   body.className = "uw-learn-body";
   const summary = document.createElement("div");
   summary.className = "uw-learn-summary";
+  const viewSwitcher = document.createElement("div");
+  viewSwitcher.className = "uw-learn-view-switcher";
+  viewSwitcher.setAttribute("role", "tablist");
+  viewSwitcher.setAttribute("aria-label", "Assignment view");
+  const listViewButton = makeButton("List", "Show assignments as a list");
+  const calendarViewButton = makeButton("Calendar", "Show assignments in a month calendar");
+  listViewButton.setAttribute("role", "tab");
+  calendarViewButton.setAttribute("role", "tab");
+  viewSwitcher.append(listViewButton, calendarViewButton);
   const message = document.createElement("p");
   message.className = "uw-learn-message";
   message.setAttribute("role", "status");
   const list = document.createElement("ol");
   list.className = "uw-learn-list";
+  const calendarView = document.createElement("div");
+  calendarView.className = "uw-learn-month-view";
+  calendarView.hidden = true;
   const footer = document.createElement("p");
   footer.className = "uw-learn-footer";
-  body.append(summary, message, list, footer);
+  body.append(summary, viewSwitcher, message, list, calendarView, footer);
   root.append(header, body);
   document.body.append(root);
 
@@ -67,6 +90,8 @@
     downloadCalendar();
   });
   googleButton.addEventListener("click", createGoogleCalendar);
+  listViewButton.addEventListener("click", () => setDashboardView("list"));
+  calendarViewButton.addEventListener("click", () => setDashboardView("calendar"));
   document.addEventListener("click", (event) => {
     if (!calendarWrap.contains(event.target)) setCalendarMenu(false);
   });
@@ -95,6 +120,22 @@
     exportButton.setAttribute("aria-expanded", String(open));
   }
 
+  function setDashboardView(view, persist = true) {
+    state.view = view === "calendar" ? "calendar" : "list";
+    const showingCalendar = state.view === "calendar";
+    list.hidden = showingCalendar;
+    calendarView.hidden = !showingCalendar;
+    root.classList.toggle("uw-learn-calendar-mode", showingCalendar);
+    listViewButton.classList.toggle("uw-learn-active-view", !showingCalendar);
+    calendarViewButton.classList.toggle("uw-learn-active-view", showingCalendar);
+    listViewButton.setAttribute("aria-selected", String(!showingCalendar));
+    calendarViewButton.setAttribute("aria-selected", String(showingCalendar));
+    listViewButton.tabIndex = showingCalendar ? -1 : 0;
+    calendarViewButton.tabIndex = showingCalendar ? 0 : -1;
+    if (showingCalendar) renderMonthCalendar();
+    if (persist) saveView();
+  }
+
   async function loadAssignments() {
     if (state.loading) return;
     state.loading = true;
@@ -104,16 +145,22 @@
     refreshButton.textContent = "Loading…";
     summary.replaceChildren();
     list.replaceChildren();
+    calendarView.replaceChildren();
     footer.textContent = "";
     message.className = "uw-learn-message";
     message.textContent = "Collecting assignments from your active courses…";
 
     try {
-      const [versions, crossedAssignments] = await Promise.all([
+      const [versions, crossedAssignments, notes, savedView] = await Promise.all([
         getApiVersions(),
-        getStoredCrossedAssignments()
+        getStoredCrossedAssignments(),
+        getStoredNotes(),
+        getStoredView()
       ]);
       state.crossed = new Set(crossedAssignments);
+      state.notes = notes;
+      state.view = savedView;
+      setDashboardView(savedView, false);
       const courses = await getCourses(versions.lp);
       if (!courses.length) {
         state.assignments = [];
@@ -268,9 +315,50 @@
     });
   }
 
+  function getStoredNotes() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(NOTES_STORAGE_KEY, (result) => {
+        if (chrome.runtime.lastError || !result || typeof result[NOTES_STORAGE_KEY] !== "object") {
+          resolve({});
+          return;
+        }
+        resolve(Object.fromEntries(
+          Object.entries(result[NOTES_STORAGE_KEY])
+            .filter(([key, value]) => typeof key === "string" && typeof value === "string")
+            .map(([key, value]) => [key, value.slice(0, 2000)])
+        ));
+      });
+    });
+  }
+
+  function saveNotes() {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [NOTES_STORAGE_KEY]: state.notes }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
+  function getStoredView() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(VIEW_STORAGE_KEY, (result) => {
+        resolve(result?.[VIEW_STORAGE_KEY] === "calendar" ? "calendar" : "list");
+      });
+    });
+  }
+
+  function saveView() {
+    chrome.storage.local.set({ [VIEW_STORAGE_KEY]: state.view });
+  }
+
   function renderAssignments() {
     list.replaceChildren();
     renderSummary();
+    renderMonthCalendar();
 
     if (!state.assignments.length) {
       message.textContent = "No visible assignments were found in your active courses.";
@@ -325,7 +413,62 @@
       date.className = "uw-learn-date";
       date.textContent = assignment.dueDate ? formatDueDate(assignment.dueDate) : "No due date";
       link.append(topLine, course, date);
-      item.append(crossControl, link);
+
+      const assignmentContent = document.createElement("div");
+      assignmentContent.className = "uw-learn-assignment-content";
+      assignmentContent.append(link);
+      const noteArea = document.createElement("div");
+      noteArea.className = "uw-learn-note-area";
+      const note = state.notes[key] || "";
+      if (state.editingNoteKey === key) {
+        const textarea = document.createElement("textarea");
+        textarea.maxLength = 2000;
+        textarea.rows = 3;
+        textarea.value = note;
+        textarea.placeholder = "Add a reminder, plan, or other note…";
+        textarea.setAttribute("aria-label", `Note for ${assignment.name}`);
+        const noteActions = document.createElement("div");
+        noteActions.className = "uw-learn-note-actions";
+        const cancelNote = makeButton("Cancel", `Cancel note for ${assignment.name}`);
+        const saveNote = makeButton("Save note", `Save note for ${assignment.name}`);
+        saveNote.className = "uw-learn-save-note";
+        cancelNote.addEventListener("click", () => {
+          state.editingNoteKey = null;
+          renderAssignments();
+        });
+        saveNote.addEventListener("click", async () => {
+          const value = textarea.value.trim();
+          if (value) state.notes[key] = value;
+          else delete state.notes[key];
+          state.editingNoteKey = null;
+          renderAssignments();
+          try {
+            await saveNotes();
+          } catch {
+            message.className = "uw-learn-message uw-learn-error";
+            message.textContent = "The assignment note could not be saved.";
+          }
+        });
+        noteActions.append(cancelNote, saveNote);
+        noteArea.append(textarea, noteActions);
+        setTimeout(() => textarea.focus(), 0);
+      } else {
+        if (note) {
+          const noteText = document.createElement("p");
+          noteText.className = "uw-learn-note-text";
+          noteText.textContent = note;
+          noteArea.append(noteText);
+        }
+        const editNote = makeButton(note ? "Edit note" : "Add note", `${note ? "Edit" : "Add"} note for ${assignment.name}`);
+        editNote.className = "uw-learn-note-button";
+        editNote.addEventListener("click", () => {
+          state.editingNoteKey = key;
+          renderAssignments();
+        });
+        noteArea.append(editNote);
+      }
+      assignmentContent.append(noteArea);
+      item.append(crossControl, assignmentContent);
       list.append(item);
     }
   }
@@ -338,12 +481,125 @@
     const overdue = remaining.length - upcoming.length;
     const completed = state.assignments.filter(isCompleted).length;
     exportButton.disabled = !dated.length;
-    exportButton.textContent = dated.length ? `Calendar (${dated.length})` : "Calendar";
+    exportButton.textContent = dated.length ? `Export (${dated.length})` : "Export";
     summary.append(
       makeStat(upcoming.length, "upcoming"),
       makeStat(overdue, "overdue"),
       makeStat(completed, "completed")
     );
+  }
+
+  function renderMonthCalendar() {
+    calendarView.replaceChildren();
+    const monthHeader = document.createElement("div");
+    monthHeader.className = "uw-learn-month-header";
+    const previousMonth = makeButton("Previous", "Show previous month");
+    const monthTitle = document.createElement("h3");
+    monthTitle.textContent = new Intl.DateTimeFormat(undefined, {
+      month: "long",
+      year: "numeric"
+    }).format(state.calendarMonth);
+    const monthActions = document.createElement("div");
+    monthActions.className = "uw-learn-month-actions";
+    const today = makeButton("Today", "Show current month");
+    const nextMonth = makeButton("Next", "Show next month");
+    previousMonth.addEventListener("click", () => {
+      state.calendarMonth = new Date(
+        state.calendarMonth.getFullYear(),
+        state.calendarMonth.getMonth() - 1,
+        1
+      );
+      renderMonthCalendar();
+    });
+    today.addEventListener("click", () => {
+      const now = new Date();
+      state.calendarMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      renderMonthCalendar();
+    });
+    nextMonth.addEventListener("click", () => {
+      state.calendarMonth = new Date(
+        state.calendarMonth.getFullYear(),
+        state.calendarMonth.getMonth() + 1,
+        1
+      );
+      renderMonthCalendar();
+    });
+    monthActions.append(today, nextMonth);
+    monthHeader.append(previousMonth, monthTitle, monthActions);
+
+    const weekdays = document.createElement("div");
+    weekdays.className = "uw-learn-weekdays";
+    for (const weekday of ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]) {
+      const label = document.createElement("span");
+      label.textContent = weekday;
+      weekdays.append(label);
+    }
+
+    const grid = document.createElement("div");
+    grid.className = "uw-learn-month-grid";
+    grid.setAttribute("role", "grid");
+    const firstDay = new Date(
+      state.calendarMonth.getFullYear(),
+      state.calendarMonth.getMonth(),
+      1
+    );
+    const daysInMonth = new Date(
+      firstDay.getFullYear(),
+      firstDay.getMonth() + 1,
+      0
+    ).getDate();
+    const cellCount = Math.ceil((firstDay.getDay() + daysInMonth) / 7) * 7;
+    const gridStart = new Date(firstDay.getFullYear(), firstDay.getMonth(), 1 - firstDay.getDay());
+    const assignmentsByDay = new Map();
+    for (const assignment of state.assignments) {
+      if (!assignment.dueDate) continue;
+      const key = localDateKey(assignment.dueDate);
+      if (!assignmentsByDay.has(key)) assignmentsByDay.set(key, []);
+      assignmentsByDay.get(key).push(assignment);
+    }
+
+    for (let index = 0; index < cellCount; index += 1) {
+      const date = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + index);
+      const key = localDateKey(date);
+      const cell = document.createElement("div");
+      cell.className = "uw-learn-month-day";
+      cell.setAttribute("role", "gridcell");
+      cell.classList.toggle("uw-learn-other-month", date.getMonth() !== firstDay.getMonth());
+      cell.classList.toggle("uw-learn-today-cell", localDateKey(new Date()) === key);
+      const dayNumber = document.createElement("time");
+      dayNumber.dateTime = key;
+      dayNumber.textContent = String(date.getDate());
+      cell.append(dayNumber);
+
+      for (const assignment of assignmentsByDay.get(key) || []) {
+        const event = document.createElement("a");
+        event.className = "uw-learn-month-event";
+        event.href = assignmentUrl(assignment);
+        event.textContent = assignment.name;
+        const assignmentKeyValue = assignmentKey(assignment);
+        const crossed = state.crossed.has(assignmentKeyValue);
+        event.classList.toggle("uw-learn-month-completed", assignment.submitted === true || crossed);
+        event.classList.toggle(
+          "uw-learn-month-overdue",
+          !assignment.submitted && !crossed && assignment.dueDate < new Date()
+        );
+        const note = state.notes[assignmentKeyValue];
+        event.classList.toggle("uw-learn-month-has-note", Boolean(note));
+        event.title = [assignment.courseName, assignment.name, formatDueDate(assignment.dueDate), note ? `Note: ${note}` : ""]
+          .filter(Boolean)
+          .join(" — ");
+        cell.append(event);
+      }
+      grid.append(cell);
+    }
+    calendarView.append(monthHeader, weekdays, grid);
+  }
+
+  function localDateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
 
   function makeStat(value, label) {
@@ -475,7 +731,7 @@
       const retention = document.createElement("p");
       retention.textContent = "The service stores this data for up to one year after the last update. Anyone who obtains the random private feed URL can view its calendar contents. Google Calendar receives the same contents when you subscribe.";
       const excluded = document.createElement("p");
-      excluded.textContent = "Your Waterloo password, identity, grades, submitted files, submission status, and manual Done selections are not sent.";
+      excluded.textContent = "Your Waterloo password, identity, grades, submitted files, submission status, manual Done selections, and notes are not sent.";
       const privacy = document.createElement("a");
       privacy.href = PRIVACY_POLICY_URL;
       privacy.target = "_blank";

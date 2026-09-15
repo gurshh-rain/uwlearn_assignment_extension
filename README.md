@@ -62,6 +62,8 @@ Temporary Safari extensions may need to be added again after Safari restarts. Ol
 - Labels overdue, due-today, due-tomorrow, upcoming, and submitted work.
 - Detects submissions from the signed-in student's Brightspace assignment history.
 - Provides a **Done** checkbox that crosses out assignments and persists across browser sessions.
+- Saves private manual notes beneath individual assignments in browser storage.
+- Switches between the assignment list and a navigable built-in month calendar.
 - Moves submitted and manually crossed-out assignments below remaining work.
 - Excludes completed work from upcoming and overdue counts.
 - Links each item to its assignment page in LEARN.
@@ -71,9 +73,16 @@ Temporary Safari extensions may need to be added again after Safari restarts. Ol
 
 If some courses cannot be read, the panel displays the number that failed while still showing assignments from the other courses. Assignments without due dates are not sent to calendars.
 
+## Dashboard views and notes
+
+- Select **List** to use the assignment checklist, add or edit private notes, and open assignment links.
+- Select **Calendar** to see dated assignments in a month grid. Use **Previous**, **Today**, and **Next** to navigate.
+- Notes are stored only in browser extension storage. A gold edge on a calendar event indicates that the assignment has a note; hover over the event to read it.
+- The selected List or Calendar view is restored the next time LEARN opens.
+
 ## Calendar options
 
-Select **Calendar** in the assignment panel, then choose:
+Select **Export** in the assignment panel, then choose:
 
 - **iCalendar download** to save every dated assignment in one `.ics` file.
 - **Google Calendar** to publish a private calendar feed and open Google Calendar with the subscription ready to add.

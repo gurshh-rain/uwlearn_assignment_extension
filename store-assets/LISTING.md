@@ -20,6 +20,8 @@ Features:
 - Due dates with overdue, today, tomorrow, and upcoming labels
 - Automatic submitted-status detection
 - Persistent Done checkboxes for manually crossing out work
+- Private manual notes stored in the browser
+- Switchable list and built-in month calendar views
 - Direct links back to each LEARN assignment
 - iCalendar file export
 - Private Google Calendar subscription with one-hour deadline blocks
@@ -40,7 +42,7 @@ Consolidate assignment and deadline information from Waterloo LEARN and let stud
 
 ### storage
 
-Stores manual Done selections, the calendar-data consent version, and the private calendar feed identifier/update token so preferences and calendar updates persist across sessions.
+Stores manual Done selections, assignment notes, the selected dashboard view, the calendar-data consent version, and the private calendar feed identifier/update token so preferences and calendar updates persist across sessions.
 
 ### learn.uwaterloo.ca
 
@@ -52,7 +54,7 @@ After explicit user consent, sends assignment names, course names, due dates, an
 
 ## Data-use disclosure
 
-The extension locally handles website content consisting of course and assignment information. Optional calendar publishing transmits assignment names, course names, due dates, and LEARN links to the hosted calendar service. Submission status and manual Done selections are not uploaded. Data is not sold, used for advertising, or used for unrelated purposes.
+The extension locally handles website content consisting of course and assignment information. Optional calendar publishing transmits assignment names, course names, due dates, and LEARN links to the hosted calendar service. Submission status, manual Done selections, and assignment notes are not uploaded. Data is not sold, used for advertising, or used for unrelated purposes.
 
 Privacy policy URL:
 
@@ -67,9 +69,11 @@ https://github.com/gurshh-rain/uwlearn_assignment_extension/issues
 1. Install the extension and grant access to `https://learn.uwaterloo.ca`.
 2. Sign in with a valid Waterloo LEARN student account.
 3. Open the LEARN homepage and confirm the Assignments panel appears in the top-right corner.
-4. Confirm assignments are sorted, submission badges appear where applicable, and Done selections persist after refresh.
-5. Select Calendar, then Google Calendar. Review and accept the in-product disclosure.
-6. Confirm Google Calendar opens with the private calendar subscription ready to add.
+4. Add an assignment note and confirm it persists after refresh.
+5. Switch between List and Calendar, navigate months, and confirm dated assignments appear on the correct days.
+6. Confirm submission badges appear where applicable and Done selections persist after refresh.
+7. Select the header Export menu, then Google Calendar. Review and accept the in-product disclosure.
+8. Confirm Google Calendar opens with the private calendar subscription ready to add.
 
 No Waterloo test credentials can be provided because credentials are personal institutional accounts. A reviewer should not request or use another person's Waterloo credentials.
 
