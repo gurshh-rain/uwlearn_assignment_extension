@@ -1,0 +1,16 @@
+{
+  "name": "uwlearn-calendar-feed",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-01",
+  "triggers": {
+    "crons": ["17 4 * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "uwlearn-calendar-feed",
+      "database_id": "ea276d8b-ae7b-4a36-b7f0-321510d810c9",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

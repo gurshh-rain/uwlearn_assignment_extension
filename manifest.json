@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Waterloo LEARN Assignment Dashboard",
+  "version": "1.3.1",
+  "description": "Shows assignments and due dates in one place while using Waterloo LEARN.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://learn.uwaterloo.ca/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "https://learn.uwaterloo.ca/*",
+    "https://*.workers.dev/*"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "learn-assignments@uwaterloo.ca",
+      "strict_min_version": "109.0"
+    }
+  }
+}

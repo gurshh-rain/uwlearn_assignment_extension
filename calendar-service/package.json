@@ -1,0 +1,10 @@
+{
+  "name": "uwlearn-calendar-feed",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "deploy": "npx --yes wrangler@4.129.0 deploy --env-file ../.env"
+  }
+}

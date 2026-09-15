@@ -1,0 +1,461 @@
+(() => {
+  "use strict";
+
+  const ROOT_ID = "uw-learn-assignment-dashboard";
+  const FALLBACK_VERSIONS = { lp: "1.44", le: "1.67" };
+  const state = { collapsed: false, loading: false, assignments: [] };
+
+  if (document.getElementById(ROOT_ID)) return;
+
+  const root = document.createElement("section");
+  root.id = ROOT_ID;
+  root.setAttribute("aria-label", "LEARN assignments");
+
+  const header = document.createElement("header");
+  const headingWrap = document.createElement("div");
+  const eyebrow = document.createElement("span");
+  const heading = document.createElement("h2");
+  eyebrow.className = "uw-learn-eyebrow";
+  eyebrow.textContent = "WATERLOO LEARN";
+  heading.textContent = "Assignments";
+  headingWrap.append(eyebrow, heading);
+
+  const controls = document.createElement("div");
+  controls.className = "uw-learn-controls";
+  const refreshButton = makeButton("Refresh", "Refresh assignments");
+  const calendarWrap = document.createElement("div");
+  calendarWrap.className = "uw-learn-calendar-wrap";
+  const exportButton = makeButton("Add to calendar", "Choose a calendar export option");
+  exportButton.disabled = true;
+  exportButton.setAttribute("aria-expanded", "false");
+  const calendarMenu = document.createElement("div");
+  calendarMenu.className = "uw-learn-calendar-menu";
+  calendarMenu.hidden = true;
+  const icalButton = makeButton("iCalendar download", "Download assignments as an iCalendar file");
+  const googleButton = makeButton("Google Calendar", "Create a Google Calendar for these assignments");
+  calendarMenu.append(icalButton, googleButton);
+  calendarWrap.append(exportButton, calendarMenu);
+  const collapseButton = makeButton("−", "Collapse assignment dashboard");
+  collapseButton.className = "uw-learn-icon-button";
+  controls.append(refreshButton, calendarWrap, collapseButton);
+  header.append(headingWrap, controls);
+
+  const body = document.createElement("div");
+  body.className = "uw-learn-body";
+  const summary = document.createElement("div");
+  summary.className = "uw-learn-summary";
+  const message = document.createElement("p");
+  message.className = "uw-learn-message";
+  message.setAttribute("role", "status");
+  const list = document.createElement("ol");
+  list.className = "uw-learn-list";
+  const footer = document.createElement("p");
+  footer.className = "uw-learn-footer";
+  body.append(summary, message, list, footer);
+  root.append(header, body);
+  document.body.append(root);
+
+  refreshButton.addEventListener("click", loadAssignments);
+  exportButton.addEventListener("click", () => setCalendarMenu(calendarMenu.hidden));
+  icalButton.addEventListener("click", () => {
+    setCalendarMenu(false);
+    downloadCalendar();
+  });
+  googleButton.addEventListener("click", createGoogleCalendar);
+  document.addEventListener("click", (event) => {
+    if (!calendarWrap.contains(event.target)) setCalendarMenu(false);
+  });
+  collapseButton.addEventListener("click", () => {
+    state.collapsed = !state.collapsed;
+    root.classList.toggle("uw-learn-collapsed", state.collapsed);
+    collapseButton.textContent = state.collapsed ? "+" : "−";
+    collapseButton.setAttribute(
+      "aria-label",
+      state.collapsed ? "Expand assignment dashboard" : "Collapse assignment dashboard"
+    );
+  });
+
+  loadAssignments();
+
+  function makeButton(text, label) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = text;
+    button.setAttribute("aria-label", label);
+    return button;
+  }
+
+  function setCalendarMenu(open) {
+    calendarMenu.hidden = !open;
+    exportButton.setAttribute("aria-expanded", String(open));
+  }
+
+  async function loadAssignments() {
+    if (state.loading) return;
+    state.loading = true;
+    refreshButton.disabled = true;
+    exportButton.disabled = true;
+    setCalendarMenu(false);
+    refreshButton.textContent = "Loading…";
+    summary.replaceChildren();
+    list.replaceChildren();
+    footer.textContent = "";
+    message.className = "uw-learn-message";
+    message.textContent = "Collecting assignments from your active courses…";
+
+    try {
+      const versions = await getApiVersions();
+      const courses = await getCourses(versions.lp);
+      if (!courses.length) {
+        state.assignments = [];
+        renderAssignments();
+        message.textContent = "No active courses were found.";
+        return;
+      }
+
+      const results = await mapWithConcurrency(courses, 5, async (course) => {
+        try {
+          return { assignments: await getCourseAssignments(course, versions.le), failed: false };
+        } catch {
+          return { assignments: [], failed: true };
+        }
+      });
+      const failedCourses = results.filter((result) => result.failed).length;
+      if (failedCourses === courses.length) {
+        throw new Error("LEARN did not allow assignment data to be read.");
+      }
+
+      state.assignments = results.flatMap((result) => result.assignments).sort(compareAssignments);
+      renderAssignments();
+      syncCalendarFeed();
+      message.textContent = failedCourses
+        ? `${failedCourses} ${pluralize(failedCourses, "course", "courses")} could not be loaded.`
+        : "";
+      footer.textContent = `Updated ${new Intl.DateTimeFormat(undefined, {
+        hour: "numeric",
+        minute: "2-digit"
+      }).format(new Date())}`;
+    } catch (error) {
+      summary.replaceChildren();
+      list.replaceChildren();
+      message.className = "uw-learn-message uw-learn-error";
+      message.textContent = `${error.message} Try refreshing LEARN, then refresh this list.`;
+    } finally {
+      state.loading = false;
+      refreshButton.disabled = false;
+      refreshButton.textContent = "Refresh";
+    }
+  }
+
+  async function getApiVersions() {
+    try {
+      const response = await apiFetch("/d2l/api/versions/");
+      const entries = Array.isArray(response) ? response : response.Versions || [];
+      return Object.fromEntries(
+        Object.entries(FALLBACK_VERSIONS).map(([product, fallback]) => {
+          const entry = entries.find(
+            (version) => String(version.ProductCode || "").toLowerCase() === product
+          );
+          return [product, entry?.LatestVersion || fallback];
+        })
+      );
+    } catch {
+      return { ...FALLBACK_VERSIONS };
+    }
+  }
+
+  async function getCourses(version) {
+    const path = `/d2l/api/lp/${version}/enrollments/myenrollments/?orgUnitTypeId=3&isActive=true`;
+    const enrollments = await getPagedItems(path);
+    return enrollments
+      .filter((enrollment) => enrollment.IsActive !== false && enrollment.OrgUnit?.Id)
+      .map((enrollment) => ({
+        id: enrollment.OrgUnit.Id,
+        name: enrollment.OrgUnit.Name || enrollment.OrgUnit.Code || "Course"
+      }));
+  }
+
+  async function getCourseAssignments(course, version) {
+    const folders = await getPagedItems(`/d2l/api/le/${version}/${course.id}/dropbox/folders/`);
+    return folders
+      .filter((folder) => folder && folder.IsHidden !== true)
+      .map((folder) => ({
+        id: folder.Id,
+        name: folder.Name || "Untitled assignment",
+        courseId: course.id,
+        courseName: course.name,
+        dueDate: parseDate(folder.DueDate)
+      }));
+  }
+
+  async function getPagedItems(initialPath) {
+    const items = [];
+    let path = initialPath;
+    for (let page = 0; path && page < 50; page += 1) {
+      const data = await apiFetch(path);
+      if (Array.isArray(data)) return items.concat(data);
+      items.push(...(data.Items || []));
+      const paging = data.PagingInfo;
+      path = paging?.HasMoreItems && paging.Bookmark
+        ? withQuery(initialPath, "bookmark", paging.Bookmark)
+        : null;
+    }
+    return items;
+  }
+
+  async function apiFetch(path) {
+    const response = await fetch(path, {
+      credentials: "include",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) throw new Error(`LEARN request failed (${response.status}).`);
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("json")) throw new Error("Your LEARN session may have expired.");
+    return response.json();
+  }
+
+  function renderAssignments() {
+    list.replaceChildren();
+    summary.replaceChildren();
+
+    const dated = state.assignments.filter((assignment) => assignment.dueDate);
+    exportButton.disabled = !dated.length;
+    exportButton.textContent = dated.length ? `Add to calendar (${dated.length})` : "Add to calendar";
+    const upcoming = dated.filter((assignment) => assignment.dueDate >= new Date());
+    const overdue = dated.length - upcoming.length;
+    summary.append(
+      makeStat(upcoming.length, "upcoming"),
+      makeStat(overdue, "overdue"),
+      makeStat(state.assignments.length, "total")
+    );
+
+    if (!state.assignments.length) {
+      message.textContent = "No visible assignments were found in your active courses.";
+      return;
+    }
+
+    for (const assignment of state.assignments) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = assignmentUrl(assignment);
+      const topLine = document.createElement("div");
+      topLine.className = "uw-learn-assignment-top";
+      const name = document.createElement("strong");
+      name.textContent = assignment.name;
+      const badge = document.createElement("span");
+      const due = dueDetails(assignment.dueDate);
+      badge.className = `uw-learn-badge ${due.className}`;
+      badge.textContent = due.label;
+      topLine.append(name, badge);
+
+      const course = document.createElement("span");
+      course.className = "uw-learn-course";
+      course.textContent = assignment.courseName;
+      const date = document.createElement("span");
+      date.className = "uw-learn-date";
+      date.textContent = assignment.dueDate ? formatDueDate(assignment.dueDate) : "No due date";
+      link.append(topLine, course, date);
+      item.append(link);
+      list.append(item);
+    }
+  }
+
+  function makeStat(value, label) {
+    const stat = document.createElement("div");
+    const number = document.createElement("strong");
+    const text = document.createElement("span");
+    number.textContent = String(value);
+    text.textContent = label;
+    stat.append(number, text);
+    return stat;
+  }
+
+  function dueDetails(date) {
+    if (!date) return { label: "No date", className: "uw-learn-neutral" };
+    const now = new Date();
+    const today = startOfDay(now);
+    const dueDay = startOfDay(date);
+    const dayDifference = Math.round((dueDay - today) / 86400000);
+    if (date < now) return { label: "Overdue", className: "uw-learn-overdue" };
+    if (dayDifference === 0) return { label: "Today", className: "uw-learn-today" };
+    if (dayDifference === 1) return { label: "Tomorrow", className: "uw-learn-soon" };
+    if (dayDifference <= 7) return { label: `${dayDifference} days`, className: "uw-learn-soon" };
+    return { label: "Upcoming", className: "uw-learn-upcoming" };
+  }
+
+  function formatDueDate(date) {
+    return `Due ${new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(date)}`;
+  }
+
+  function compareAssignments(a, b) {
+    if (a.dueDate && b.dueDate) return a.dueDate - b.dueDate;
+    if (a.dueDate) return -1;
+    if (b.dueDate) return 1;
+    return a.courseName.localeCompare(b.courseName) || a.name.localeCompare(b.name);
+  }
+
+  function assignmentUrl(assignment) {
+    const params = new URLSearchParams({
+      db: assignment.id,
+      grpid: "0",
+      isprv: "0",
+      bp: "0",
+      ou: assignment.courseId
+    });
+    return `/d2l/lms/dropbox/user/folder_submit_files.d2l?${params}`;
+  }
+
+  async function createGoogleCalendar() {
+    const assignments = calendarAssignments();
+    if (!assignments.length) return;
+
+    setCalendarMenu(false);
+    googleButton.disabled = true;
+    message.className = "uw-learn-message";
+    message.textContent = "Preparing your private Google Calendar feed…";
+    try {
+      const response = await sendRuntimeMessage({
+        type: "PUBLISH_CALENDAR_FEED",
+        assignments
+      });
+      if (response?.ok) {
+        message.textContent = `Google Calendar opened with ${response.count} ${pluralize(response.count, "assignment", "assignments")} ready to add.`;
+      } else {
+        message.className = "uw-learn-message uw-learn-error";
+        message.textContent = response?.message || "The hosted calendar feed is unavailable.";
+      }
+    } catch {
+      message.className = "uw-learn-message uw-learn-error";
+      message.textContent = "The hosted calendar feed is unavailable.";
+    } finally {
+      googleButton.disabled = false;
+    }
+  }
+
+  async function syncCalendarFeed() {
+    const assignments = calendarAssignments();
+    if (!assignments.length) return;
+    try {
+      await sendRuntimeMessage({ type: "SYNC_CALENDAR_FEED", assignments });
+    } catch {
+      return;
+    }
+  }
+
+  function calendarAssignments() {
+    return state.assignments
+      .filter((assignment) => assignment.dueDate)
+      .map((assignment) => ({
+        id: assignment.id,
+        name: assignment.name,
+        courseId: assignment.courseId,
+        courseName: assignment.courseName,
+        dueDate: assignment.dueDate.toISOString(),
+        url: new URL(assignmentUrl(assignment), window.location.origin).href
+      }));
+  }
+
+  function sendRuntimeMessage(payload) {
+    return new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(payload, (response) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve(response);
+      });
+    });
+  }
+
+  function downloadCalendar() {
+    const dated = state.assignments.filter((assignment) => assignment.dueDate);
+    if (!dated.length) return;
+
+    const generatedAt = formatIcsDate(new Date());
+    const events = dated.flatMap((assignment) => {
+      const url = new URL(assignmentUrl(assignment), window.location.origin).href;
+      const startDate = new Date(assignment.dueDate.getTime() - 60 * 60 * 1000);
+      return [
+        "BEGIN:VEVENT",
+        `UID:${assignment.courseId}-${assignment.id}@learn.uwaterloo.ca`,
+        `DTSTAMP:${generatedAt}`,
+        `DTSTART:${formatIcsDate(startDate)}`,
+        `DTEND:${formatIcsDate(assignment.dueDate)}`,
+        `SUMMARY:${escapeIcs(`Due: ${assignment.name}`)}`,
+        `DESCRIPTION:${escapeIcs(`Course: ${assignment.courseName}\nOpen in LEARN: ${url}`)}`,
+        `URL:${url}`,
+        "END:VEVENT"
+      ];
+    });
+    const calendar = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Waterloo LEARN Assignment Dashboard//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      ...events,
+      "END:VCALENDAR",
+      ""
+    ].join("\r\n");
+    const downloadUrl = URL.createObjectURL(new Blob([calendar], { type: "text/calendar;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `waterloo-learn-assignments-${new Date().toISOString().slice(0, 10)}.ics`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  }
+
+  function formatIcsDate(date) {
+    return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  }
+
+  function escapeIcs(value) {
+    return value
+      .replace(/\\/g, "\\\\")
+      .replace(/\r?\n/g, "\\n")
+      .replace(/;/g, "\\;")
+      .replace(/,/g, "\\,");
+  }
+
+  function parseDate(value) {
+    if (!value) return null;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function startOfDay(value) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  function withQuery(path, key, value) {
+    const url = new URL(path, window.location.origin);
+    url.searchParams.set(key, value);
+    return `${url.pathname}${url.search}`;
+  }
+
+  function pluralize(count, singular, plural) {
+    return count === 1 ? singular : plural;
+  }
+
+  async function mapWithConcurrency(items, concurrency, mapper) {
+    const results = new Array(items.length);
+    let index = 0;
+    async function worker() {
+      while (index < items.length) {
+        const current = index;
+        index += 1;
+        results[current] = await mapper(items[current], current);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+    return results;
+  }
+})();

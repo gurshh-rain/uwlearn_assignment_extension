@@ -28,6 +28,7 @@ Firefox removes temporary add-ons when the browser closes. Permanent installatio
 - Labels overdue, due-today, due-tomorrow, and upcoming work.
 - Links each item to its assignment page in LEARN.
 - Offers separate **iCalendar download** and **Google Calendar** options.
+- Adds each dated assignment as a one-hour block ending at its deadline.
 - Refreshes only when the panel first loads or when **Refresh** is selected.
 
 If some courses cannot be read, the panel displays the number that failed while still showing assignments from the other courses. Assignments without due dates are not sent to calendars.
@@ -37,28 +38,16 @@ If some courses cannot be read, the panel displays the number that failed while 
 Select **Add to calendar** in the assignment panel, then choose:
 
 - **iCalendar download** to save every dated assignment in one `.ics` file.
-- **Google Calendar** to create a new **Waterloo LEARN Assignments** calendar and add the assignments automatically on a configured Chromium browser.
+- **Google Calendar** to publish a private calendar feed and open Google Calendar with the subscription ready to add.
 
-On Safari or before Google OAuth is configured, the Google option downloads the `.ics` file and opens Google Calendar's new-calendar setup. Import the file from **Google Calendar → Settings → Import & export**. Importing the same file more than once may create duplicate events.
+The Google option works like UW Flow and does not require Google OAuth. On first use, confirm the prepared calendar inside Google Calendar. The extension updates the same private feed whenever LEARN opens; Google controls how quickly subscribed calendars refresh.
 
-## Enable one-click Google Calendar on Chromium
+The Google option never downloads a file. If the hosted service is unavailable, it opens Google Calendar without a feed and displays an error in LEARN. The separate **iCalendar download** option is the only action that downloads an `.ics` file.
 
-Google requires the extension owner to provide an OAuth client ID. A client secret must not be added to the extension.
+## Enable the hosted calendar feed
 
-1. Load the unpacked extension and copy its ID from the browser's extensions page.
-2. In Google Cloud, create a project and enable the **Google Calendar API**.
-3. Configure the OAuth consent screen. While the app is in testing, add your Google account as a test user.
-4. Create an OAuth client with application type **Chrome Extension**, using the extension ID as its item ID.
-5. Add the resulting client ID and least-privilege scope to `manifest.json`:
+The `calendar-service` directory contains a Cloudflare Worker and D1 service designed for Cloudflare's free tier. This package is configured to use the deployed service at `https://uwlearn-calendar-feed.gurshaan1124.workers.dev`. Follow the [deployment guide](calendar-service/README.md) only when deploying a replacement service.
 
-```json
-"oauth2": {
-  "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
-  "scopes": ["https://www.googleapis.com/auth/calendar.app.created"]
-}
-```
+## Calendar-feed privacy
 
-6. Reload the extension. The first **Google Calendar** selection asks for Google authorization; subsequent selections create and open a new assignment calendar directly.
-
-The current package intentionally omits `oauth2` until a real client ID is available, so it remains in safe fallback mode. Safari continues to use the `.ics` fallback because Chrome's Google identity token flow is not portable to Safari.
-# uwlearn_assignment_extension
+The service stores assignment names, course names, due dates, and LEARN assignment links. Each feed has a random 192-bit public identifier, and its separate update token remains in browser extension storage. Anyone who obtains the feed URL can read that calendar, so users should treat it as private. Feeds expire one year after their last update and are removed by a daily cleanup job.

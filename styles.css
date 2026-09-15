@@ -1,0 +1,320 @@
+#uw-learn-assignment-dashboard {
+  --uw-black: #171717;
+  --uw-gold: #fdd54f;
+  --uw-border: #e2e5e9;
+  position: fixed;
+  z-index: 2147483646;
+  top: 88px;
+  right: 22px;
+  display: flex;
+  flex-direction: column;
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100vh - 112px);
+  overflow: hidden;
+  color: #202124;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+#uw-learn-assignment-dashboard * {
+  box-sizing: border-box;
+}
+
+#uw-learn-assignment-dashboard > header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 74px;
+  padding: 13px 16px;
+  color: #fff;
+  background: var(--uw-black);
+  border-top: 5px solid var(--uw-gold);
+}
+
+#uw-learn-assignment-dashboard h2 {
+  margin: 1px 0 0;
+  color: #fff;
+  font: 700 21px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-eyebrow {
+  display: block;
+  color: var(--uw-gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-calendar-wrap {
+  position: relative;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-calendar-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 9px);
+  right: 0;
+  display: grid;
+  width: 190px;
+  padding: 6px;
+  color: #202124;
+  background: #fff;
+  border: 1px solid var(--uw-border);
+  border-radius: 9px;
+  box-shadow: 0 9px 24px rgba(0, 0, 0, 0.22);
+}
+
+#uw-learn-assignment-dashboard .uw-learn-calendar-menu[hidden] {
+  display: none;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-calendar-menu button {
+  width: 100%;
+  color: #202124;
+  background: #fff;
+  border: 0;
+  text-align: left;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-calendar-menu button:hover {
+  background: #fff5c7;
+}
+
+#uw-learn-assignment-dashboard button {
+  min-height: 32px;
+  margin: 0;
+  padding: 6px 10px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 7px;
+  font: 600 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+#uw-learn-assignment-dashboard button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#uw-learn-assignment-dashboard button:focus-visible,
+#uw-learn-assignment-dashboard a:focus-visible {
+  outline: 3px solid var(--uw-gold);
+  outline-offset: 2px;
+}
+
+#uw-learn-assignment-dashboard button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-icon-button {
+  width: 32px;
+  padding: 0;
+  font-size: 20px;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 12px 14px;
+  background: #f7f8fa;
+  border-bottom: 1px solid var(--uw-border);
+}
+
+#uw-learn-assignment-dashboard .uw-learn-summary:empty {
+  display: none;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-summary > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid var(--uw-border);
+}
+
+#uw-learn-assignment-dashboard .uw-learn-summary > div:last-child {
+  border-right: 0;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-summary strong {
+  color: var(--uw-black);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-summary span {
+  color: #62676d;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-message {
+  margin: 0;
+  padding: 13px 16px;
+  color: #60646a;
+  font-size: 13px;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-message:empty {
+  display: none;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-error {
+  color: #8f1d1d;
+  background: #fff2f2;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-list li {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--uw-border);
+}
+
+#uw-learn-assignment-dashboard .uw-learn-list li:first-child {
+  border-top: 0;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-list a {
+  display: grid;
+  gap: 4px;
+  padding: 13px 16px;
+  color: inherit;
+  background: #fff;
+  text-decoration: none;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-list a:hover {
+  background: #fffbed;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-assignment-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-assignment-top strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #202124;
+  font-size: 14px;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-badge {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-overdue {
+  color: #9b1c1c;
+  background: #fee2e2;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-today,
+#uw-learn-assignment-dashboard .uw-learn-soon {
+  color: #7b4100;
+  background: #fff0c2;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-upcoming {
+  color: #155e3e;
+  background: #dcfce7;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-neutral {
+  color: #555b62;
+  background: #eceff2;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-course,
+#uw-learn-assignment-dashboard .uw-learn-date {
+  display: block;
+  overflow: hidden;
+  color: #666b72;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-date {
+  color: #353a40;
+  font-weight: 600;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-footer {
+  margin: 0;
+  padding: 9px 16px;
+  color: #747980;
+  background: #f7f8fa;
+  border-top: 1px solid var(--uw-border);
+  font-size: 11px;
+  text-align: right;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-footer:empty {
+  display: none;
+}
+
+#uw-learn-assignment-dashboard.uw-learn-collapsed {
+  width: 260px;
+}
+
+#uw-learn-assignment-dashboard.uw-learn-collapsed .uw-learn-body,
+#uw-learn-assignment-dashboard.uw-learn-collapsed .uw-learn-controls button:not(.uw-learn-icon-button) {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  #uw-learn-assignment-dashboard {
+    top: auto;
+    right: 10px;
+    bottom: 10px;
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  #uw-learn-assignment-dashboard {
+    animation: uw-learn-enter 180ms ease-out;
+  }
+}
+
+@keyframes uw-learn-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
