@@ -2,8 +2,9 @@
   "use strict";
 
   const ROOT_ID = "uw-learn-assignment-dashboard";
+  const CROSSED_STORAGE_KEY = "crossedAssignments";
   const FALLBACK_VERSIONS = { lp: "1.44", le: "1.67" };
-  const state = { collapsed: false, loading: false, assignments: [] };
+  const state = { collapsed: false, loading: false, assignments: [], crossed: new Set() };
 
   if (document.getElementById(ROOT_ID)) return;
 
@@ -104,7 +105,11 @@
     message.textContent = "Collecting assignments from your active courses…";
 
     try {
-      const versions = await getApiVersions();
+      const [versions, crossedAssignments] = await Promise.all([
+        getApiVersions(),
+        getStoredCrossedAssignments()
+      ]);
+      state.crossed = new Set(crossedAssignments);
       const courses = await getCourses(versions.lp);
       if (!courses.length) {
         state.assignments = [];
@@ -125,7 +130,11 @@
         throw new Error("LEARN did not allow assignment data to be read.");
       }
 
-      state.assignments = results.flatMap((result) => result.assignments).sort(compareAssignments);
+      const assignments = results.flatMap((result) => result.assignments);
+      await mapWithConcurrency(assignments, 6, async (assignment) => {
+        assignment.submitted = await getAssignmentSubmitted(assignment, versions.le);
+      });
+      state.assignments = assignments.sort(compareAssignments);
       renderAssignments();
       syncCalendarFeed();
       message.textContent = failedCourses
@@ -184,8 +193,24 @@
         name: folder.Name || "Untitled assignment",
         courseId: course.id,
         courseName: course.name,
-        dueDate: parseDate(folder.DueDate)
+        dueDate: parseDate(folder.DueDate),
+        submitted: null
       }));
+  }
+
+  async function getAssignmentSubmitted(assignment, version) {
+    try {
+      const data = await apiFetch(
+        `/d2l/api/le/${version}/${assignment.courseId}/dropbox/folders/${assignment.id}/submissions/mysubmissions/`
+      );
+      const entities = Array.isArray(data) ? data : data.Items || [];
+      return entities.some((entity) => {
+        const status = Number(entity.Status);
+        return status === 1 || status === 3 || entity.Submissions?.some((submission) => submission.SubmissionDate);
+      });
+    } catch {
+      return null;
+    }
   }
 
   async function getPagedItems(initialPath) {
@@ -214,20 +239,34 @@
     return response.json();
   }
 
+  function getStoredCrossedAssignments() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(CROSSED_STORAGE_KEY, (result) => {
+        if (chrome.runtime.lastError || !result) {
+          resolve([]);
+          return;
+        }
+        const stored = result[CROSSED_STORAGE_KEY];
+        resolve(Array.isArray(stored) ? stored.filter((key) => typeof key === "string") : []);
+      });
+    });
+  }
+
+  function saveCrossedAssignments() {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [CROSSED_STORAGE_KEY]: [...state.crossed] }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+
   function renderAssignments() {
     list.replaceChildren();
-    summary.replaceChildren();
-
-    const dated = state.assignments.filter((assignment) => assignment.dueDate);
-    exportButton.disabled = !dated.length;
-    exportButton.textContent = dated.length ? `Add to calendar (${dated.length})` : "Add to calendar";
-    const upcoming = dated.filter((assignment) => assignment.dueDate >= new Date());
-    const overdue = dated.length - upcoming.length;
-    summary.append(
-      makeStat(upcoming.length, "upcoming"),
-      makeStat(overdue, "overdue"),
-      makeStat(state.assignments.length, "total")
-    );
+    renderSummary();
 
     if (!state.assignments.length) {
       message.textContent = "No visible assignments were found in your active courses.";
@@ -235,7 +274,34 @@
     }
 
     for (const assignment of state.assignments) {
+      const key = assignmentKey(assignment);
+      const crossed = state.crossed.has(key);
       const item = document.createElement("li");
+      item.classList.toggle("uw-learn-crossed", crossed);
+      item.classList.toggle("uw-learn-submitted-item", assignment.submitted === true);
+
+      const crossControl = document.createElement("label");
+      crossControl.className = "uw-learn-cross-control";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = crossed;
+      checkbox.setAttribute("aria-label", `${crossed ? "Restore" : "Cross out"} ${assignment.name}`);
+      checkbox.addEventListener("change", async () => {
+        if (checkbox.checked) state.crossed.add(key);
+        else state.crossed.delete(key);
+        state.assignments.sort(compareAssignments);
+        renderAssignments();
+        try {
+          await saveCrossedAssignments();
+        } catch {
+          message.className = "uw-learn-message uw-learn-error";
+          message.textContent = "The crossed-out state could not be saved.";
+        }
+      });
+      const crossText = document.createElement("span");
+      crossText.textContent = "Done";
+      crossControl.append(checkbox, crossText);
+
       const link = document.createElement("a");
       link.href = assignmentUrl(assignment);
       const topLine = document.createElement("div");
@@ -243,9 +309,9 @@
       const name = document.createElement("strong");
       name.textContent = assignment.name;
       const badge = document.createElement("span");
-      const due = dueDetails(assignment.dueDate);
-      badge.className = `uw-learn-badge ${due.className}`;
-      badge.textContent = due.label;
+      const status = assignmentStatus(assignment, crossed);
+      badge.className = `uw-learn-badge ${status.className}`;
+      badge.textContent = status.label;
       topLine.append(name, badge);
 
       const course = document.createElement("span");
@@ -255,9 +321,25 @@
       date.className = "uw-learn-date";
       date.textContent = assignment.dueDate ? formatDueDate(assignment.dueDate) : "No due date";
       link.append(topLine, course, date);
-      item.append(link);
+      item.append(crossControl, link);
       list.append(item);
     }
+  }
+
+  function renderSummary() {
+    summary.replaceChildren();
+    const dated = state.assignments.filter((assignment) => assignment.dueDate);
+    const remaining = dated.filter((assignment) => !isCompleted(assignment));
+    const upcoming = remaining.filter((assignment) => assignment.dueDate >= new Date());
+    const overdue = remaining.length - upcoming.length;
+    const completed = state.assignments.filter(isCompleted).length;
+    exportButton.disabled = !dated.length;
+    exportButton.textContent = dated.length ? `Add to calendar (${dated.length})` : "Add to calendar";
+    summary.append(
+      makeStat(upcoming.length, "upcoming"),
+      makeStat(overdue, "overdue"),
+      makeStat(completed, "completed")
+    );
   }
 
   function makeStat(value, label) {
@@ -268,6 +350,22 @@
     text.textContent = label;
     stat.append(number, text);
     return stat;
+  }
+
+  function assignmentStatus(assignment, crossed = state.crossed.has(assignmentKey(assignment))) {
+    if (assignment.submitted === true) {
+      return { label: "Submitted", className: "uw-learn-submitted" };
+    }
+    if (crossed) return { label: "Crossed out", className: "uw-learn-crossed-badge" };
+    return dueDetails(assignment.dueDate);
+  }
+
+  function isCompleted(assignment) {
+    return assignment.submitted === true || state.crossed.has(assignmentKey(assignment));
+  }
+
+  function assignmentKey(assignment) {
+    return `${assignment.courseId}:${assignment.id}`;
   }
 
   function dueDetails(date) {
@@ -294,6 +392,8 @@
   }
 
   function compareAssignments(a, b) {
+    const completionDifference = Number(isCompleted(a)) - Number(isCompleted(b));
+    if (completionDifference) return completionDifference;
     if (a.dueDate && b.dueDate) return a.dueDate - b.dueDate;
     if (a.dueDate) return -1;
     if (b.dueDate) return 1;

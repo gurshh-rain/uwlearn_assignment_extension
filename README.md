@@ -59,7 +59,11 @@ Temporary Safari extensions may need to be added again after Safari restarts. Ol
 
 - Loads visible assignments from active course offerings.
 - Sorts assignments by due date and keeps assignments without dates at the bottom.
-- Labels overdue, due-today, due-tomorrow, and upcoming work.
+- Labels overdue, due-today, due-tomorrow, upcoming, and submitted work.
+- Detects submissions from the signed-in student's Brightspace assignment history.
+- Provides a **Done** checkbox that crosses out assignments and persists across browser sessions.
+- Moves submitted and manually crossed-out assignments below remaining work.
+- Excludes completed work from upcoming and overdue counts.
 - Links each item to its assignment page in LEARN.
 - Offers separate **iCalendar download** and **Google Calendar** options.
 - Adds each dated assignment as a one-hour block ending at its deadline.

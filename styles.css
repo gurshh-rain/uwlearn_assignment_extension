@@ -110,6 +110,7 @@
 }
 
 #uw-learn-assignment-dashboard button:focus-visible,
+#uw-learn-assignment-dashboard input:focus-visible,
 #uw-learn-assignment-dashboard a:focus-visible {
   outline: 3px solid var(--uw-gold);
   outline-offset: 2px;
@@ -191,9 +192,47 @@
 }
 
 #uw-learn-assignment-dashboard .uw-learn-list li {
+  display: flex;
+  align-items: stretch;
   margin: 0;
   padding: 0;
   border-top: 1px solid var(--uw-border);
+}
+
+#uw-learn-assignment-dashboard .uw-learn-cross-control {
+  display: flex;
+  flex: 0 0 52px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: #62676d;
+  background: #f7f8fa;
+  border-right: 1px solid var(--uw-border);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-cross-control:hover {
+  background: #fff5c7;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-cross-control input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #846f00;
+  cursor: pointer;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-crossed a {
+  opacity: 0.55;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-crossed a strong,
+#uw-learn-assignment-dashboard .uw-learn-crossed .uw-learn-course,
+#uw-learn-assignment-dashboard .uw-learn-crossed .uw-learn-date {
+  text-decoration: line-through;
 }
 
 #uw-learn-assignment-dashboard .uw-learn-list li:first-child {
@@ -202,6 +241,8 @@
 
 #uw-learn-assignment-dashboard .uw-learn-list a {
   display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 4px;
   padding: 13px 16px;
   color: inherit;
@@ -248,9 +289,15 @@
   background: #fff0c2;
 }
 
-#uw-learn-assignment-dashboard .uw-learn-upcoming {
+#uw-learn-assignment-dashboard .uw-learn-upcoming,
+#uw-learn-assignment-dashboard .uw-learn-submitted {
   color: #155e3e;
   background: #dcfce7;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-crossed-badge {
+  color: #43484e;
+  background: #e1e5e9;
 }
 
 #uw-learn-assignment-dashboard .uw-learn-neutral {
