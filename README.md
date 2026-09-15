@@ -4,22 +4,56 @@ A small browser extension that adds a consolidated assignment and due-date panel
 
 The extension uses the authenticated Brightspace API available within your existing LEARN session. It does not ask for, read, or store your Waterloo password.
 
+## Download
+
+1. Open the [GitHub Releases page](https://github.com/gurshh-rain/uwlearn_assignment_extension/releases).
+2. Open the newest release.
+3. Under **Assets**, download `waterloo-learn-assignment-dashboard.zip`.
+4. Extract the downloaded ZIP. Do not try to load the compressed ZIP directly into the browser.
+
+The extracted extension folder should contain `manifest.json`, `content.js`, `background.js`, `calendar-service-config.js`, and `styles.css` at its top level.
+
 ## Install in Chrome, Edge, Brave, or another Chromium browser
 
-1. Open the browser's extensions page (for example, `chrome://extensions`).
-2. Turn on **Developer mode**.
+1. Open the browser's extension management page:
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
+   - Brave: `brave://extensions`
+2. Enable **Developer mode**.
 3. Select **Load unpacked**.
-4. Choose this project folder.
-5. Open or refresh Waterloo LEARN.
+4. Choose the extracted extension folder containing `manifest.json`.
+5. Open or refresh [Waterloo LEARN](https://learn.uwaterloo.ca/).
+6. The **Assignments** panel should appear in the top-right corner.
+
+Keep the extracted folder on your computer after installation. If you move or delete it, the browser may no longer be able to load the extension.
 
 ## Install temporarily in Firefox
 
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Select **Load Temporary Add-on**.
-3. Choose `manifest.json` from this folder.
-4. Open or refresh Waterloo LEARN.
+1. Extract the release ZIP.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Select **Load Temporary Add-on**.
+4. Choose `manifest.json` from the extracted folder.
+5. Open or refresh [Waterloo LEARN](https://learn.uwaterloo.ca/).
 
-Firefox removes temporary add-ons when the browser closes. Permanent installation requires packaging and signing through Mozilla Add-ons.
+Firefox removes temporary add-ons when the browser closes. Repeat these steps after restarting Firefox. Permanent installation requires publishing and signing through Mozilla Add-ons.
+
+## Install temporarily in Safari 26
+
+1. Extract the release ZIP.
+2. Open **Safari → Settings → Advanced** and enable **Show features for web developers**.
+3. Open the **Developer** settings tab.
+4. Select **Add Temporary Extension** and choose the extracted extension folder.
+5. Allow the extension to access `learn.uwaterloo.ca` when Safari asks.
+6. Open or refresh [Waterloo LEARN](https://learn.uwaterloo.ca/).
+
+Temporary Safari extensions may need to be added again after Safari restarts. Older Safari versions require packaging the project as a Safari Web Extension with Xcode.
+
+## Updating
+
+1. Download and extract the newest release ZIP.
+2. Replace the old extracted extension files with the new files.
+3. Return to the browser's extension page and select **Reload** for the extension.
+4. Refresh Waterloo LEARN.
 
 ## Behavior
 
