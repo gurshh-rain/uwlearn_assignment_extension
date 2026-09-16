@@ -64,6 +64,8 @@ Temporary Safari extensions may need to be added again after Safari restarts. Ol
 - Provides a **Done** checkbox that crosses out assignments and persists across browser sessions.
 - Saves private manual notes beneath individual assignments in browser storage.
 - Switches between the assignment list and a navigable built-in month calendar.
+- Keeps the panel collapsed while navigating between pages inside LEARN.
+- Calculates Today, Tomorrow, and day-count tags without daylight-saving off-by-one errors.
 - Moves submitted and manually crossed-out assignments below remaining work.
 - Excludes completed work from upcoming and overdue counts.
 - Links each item to its assignment page in LEARN.

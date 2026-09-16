@@ -5,6 +5,7 @@
   const CROSSED_STORAGE_KEY = "crossedAssignments";
   const NOTES_STORAGE_KEY = "assignmentNotes";
   const VIEW_STORAGE_KEY = "dashboardView";
+  const COLLAPSED_STORAGE_KEY = "dashboardCollapsed";
   const CALENDAR_CONSENT_KEY = "calendarDataConsentVersion";
   const CALENDAR_CONSENT_VERSION = 1;
   const PRIVACY_POLICY_URL = "https://github.com/gurshh-rain/uwlearn_assignment_extension/blob/main/PRIVACY.md";
@@ -24,6 +25,7 @@
 
   const root = document.createElement("section");
   root.id = ROOT_ID;
+  root.className = "uw-learn-initializing";
   root.setAttribute("aria-label", "LEARN assignments");
 
   const header = document.createElement("header");
@@ -96,16 +98,10 @@
     if (!calendarWrap.contains(event.target)) setCalendarMenu(false);
   });
   collapseButton.addEventListener("click", () => {
-    state.collapsed = !state.collapsed;
-    root.classList.toggle("uw-learn-collapsed", state.collapsed);
-    collapseButton.textContent = state.collapsed ? "+" : "−";
-    collapseButton.setAttribute(
-      "aria-label",
-      state.collapsed ? "Expand assignment dashboard" : "Collapse assignment dashboard"
-    );
+    setCollapsedState(!state.collapsed);
   });
 
-  loadAssignments();
+  initializeDashboard();
 
   function makeButton(text, label) {
     const button = document.createElement("button");
@@ -113,6 +109,23 @@
     button.textContent = text;
     button.setAttribute("aria-label", label);
     return button;
+  }
+
+  async function initializeDashboard() {
+    setCollapsedState(await getStoredCollapsedState(), false);
+    root.classList.remove("uw-learn-initializing");
+    loadAssignments();
+  }
+
+  function setCollapsedState(collapsed, persist = true) {
+    state.collapsed = collapsed;
+    root.classList.toggle("uw-learn-collapsed", collapsed);
+    collapseButton.textContent = collapsed ? "+" : "−";
+    collapseButton.setAttribute(
+      "aria-label",
+      collapsed ? "Expand assignment dashboard" : "Collapse assignment dashboard"
+    );
+    if (persist) chrome.storage.local.set({ [COLLAPSED_STORAGE_KEY]: collapsed });
   }
 
   function setCalendarMenu(open) {
@@ -347,6 +360,14 @@
     return new Promise((resolve) => {
       chrome.storage.local.get(VIEW_STORAGE_KEY, (result) => {
         resolve(result?.[VIEW_STORAGE_KEY] === "calendar" ? "calendar" : "list");
+      });
+    });
+  }
+
+  function getStoredCollapsedState() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(COLLAPSED_STORAGE_KEY, (result) => {
+        resolve(!chrome.runtime.lastError && result?.[COLLAPSED_STORAGE_KEY] === true);
       });
     });
   }
@@ -631,14 +652,18 @@
   function dueDetails(date) {
     if (!date) return { label: "No date", className: "uw-learn-neutral" };
     const now = new Date();
-    const today = startOfDay(now);
-    const dueDay = startOfDay(date);
-    const dayDifference = Math.round((dueDay - today) / 86400000);
+    const dayDifference = calendarDayDifference(now, date);
     if (date < now) return { label: "Overdue", className: "uw-learn-overdue" };
     if (dayDifference === 0) return { label: "Today", className: "uw-learn-today" };
     if (dayDifference === 1) return { label: "Tomorrow", className: "uw-learn-soon" };
-    if (dayDifference <= 7) return { label: `${dayDifference} days`, className: "uw-learn-soon" };
+    if (dayDifference <= 7) return { label: `In ${dayDifference} days`, className: "uw-learn-soon" };
     return { label: "Upcoming", className: "uw-learn-upcoming" };
+  }
+
+  function calendarDayDifference(from, to) {
+    const fromDay = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+    const toDay = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    return (toDay - fromDay) / 86400000;
   }
 
   function formatDueDate(date) {
@@ -888,10 +913,6 @@
     if (!value) return null;
     const date = new Date(value);
     return Number.isNaN(date.getTime()) ? null : date;
-  }
-
-  function startOfDay(value) {
-    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
   }
 
   function withQuery(path, key, value) {

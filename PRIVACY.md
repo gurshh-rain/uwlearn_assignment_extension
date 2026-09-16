@@ -45,7 +45,7 @@ Uninstalling the extension stops future updates but does not immediately remove 
 
 - Access to `learn.uwaterloo.ca` is used only to read assignment information available in the user's existing LEARN session and add the dashboard to that site.
 - Access to the configured `workers.dev` calendar service is used only after calendar consent to create and update the private feed.
-- Browser storage is used for manual Done selections, assignment notes, the selected dashboard view, the consent version, and private feed metadata.
+- Browser storage is used for manual Done selections, assignment notes, the selected dashboard view, the collapsed panel preference, the consent version, and private feed metadata.
 
 ## Changes
 

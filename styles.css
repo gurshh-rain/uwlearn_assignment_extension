@@ -22,6 +22,10 @@
   text-align: left;
 }
 
+#uw-learn-assignment-dashboard.uw-learn-initializing {
+  visibility: hidden;
+}
+
 #uw-learn-assignment-dashboard * {
   box-sizing: border-box;
 }

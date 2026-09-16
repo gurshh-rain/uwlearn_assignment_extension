@@ -42,7 +42,7 @@ Consolidate assignment and deadline information from Waterloo LEARN and let stud
 
 ### storage
 
-Stores manual Done selections, assignment notes, the selected dashboard view, the calendar-data consent version, and the private calendar feed identifier/update token so preferences and calendar updates persist across sessions.
+Stores manual Done selections, assignment notes, the selected dashboard view, the collapsed panel preference, the calendar-data consent version, and the private calendar feed identifier/update token so preferences and calendar updates persist across sessions.
 
 ### learn.uwaterloo.ca
 
