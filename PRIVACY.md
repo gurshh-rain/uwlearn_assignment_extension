@@ -2,11 +2,11 @@
 
 Effective date: September 14, 2026
 
-Waterloo LEARN Assignment Dashboard is an independent browser extension that consolidates assignment information visible to a signed-in Waterloo LEARN user. It is not operated by or affiliated with the University of Waterloo, D2L, Google, or Cloudflare.
+Waterloo LEARN Assignment Dashboard is an independent browser extension that consolidates assignment and quiz information visible to a signed-in Waterloo LEARN user. It is not operated by or affiliated with the University of Waterloo, D2L, Google, or Cloudflare.
 
 ## Data handled locally
 
-While the user is signed in to Waterloo LEARN, the extension reads course names, assignment names, due dates, and assignment submission status through Waterloo LEARN's Brightspace APIs. This information is used to display the assignment dashboard. The extension does not request, read, or store the user's Waterloo password.
+While the user is signed in to Waterloo LEARN, the extension reads course names, assignment and quiz names, due dates, and assignment submission status through Waterloo LEARN's Brightspace APIs. This information is used to display the assignment dashboard. The extension does not request, read, or store the user's Waterloo password.
 
 Manual Done selections and assignment notes are stored in browser extension storage. A private calendar-feed identifier and update token are also stored there after the user enables Google Calendar integration.
 
@@ -16,7 +16,7 @@ The extension does not upload assignment data before the user explicitly enables
 
 If the user consents and chooses Google Calendar, the extension sends these fields to the hosted calendar service over HTTPS:
 
-- Assignment names
+- Assignment and quiz names
 - Course names
 - Due dates
 - Links to assignment pages on Waterloo LEARN
@@ -43,7 +43,7 @@ Uninstalling the extension stops future updates but does not immediately remove 
 
 ## Permissions
 
-- Access to `learn.uwaterloo.ca` is used only to read assignment information available in the user's existing LEARN session and add the dashboard to that site.
+- Access to `learn.uwaterloo.ca` is used only to read assignment and quiz information available in the user's existing LEARN session and add the dashboard to that site.
 - Access to the configured `workers.dev` calendar service is used only after calendar consent to create and update the private feed.
 - Browser storage is used for manual Done selections, assignment notes, the selected dashboard view, the collapsed panel preference, the consent version, and private feed metadata.
 

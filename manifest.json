@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Waterloo LEARN Assignment Dashboard",
-  "version": "1.6.1",
-  "description": "Shows assignments and due dates in one place while using Waterloo LEARN.",
+  "version": "1.7.0",
+  "description": "Shows assignments, quizzes, and due dates in one place while using Waterloo LEARN.",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",

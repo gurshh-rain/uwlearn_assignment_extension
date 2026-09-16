@@ -161,7 +161,7 @@
     calendarView.replaceChildren();
     footer.textContent = "";
     message.className = "uw-learn-message";
-    message.textContent = "Collecting assignments from your active courses…";
+    message.textContent = "Collecting assignments and quizzes from your active courses…";
 
     try {
       const [versions, crossedAssignments, notes, savedView] = await Promise.all([
@@ -184,18 +184,19 @@
 
       const results = await mapWithConcurrency(courses, 5, async (course) => {
         try {
-          return { assignments: await getCourseAssignments(course, versions.le), failed: false };
+          return { assignments: await getCourseActivities(course, versions.le), failed: false };
         } catch {
           return { assignments: [], failed: true };
         }
       });
       const failedCourses = results.filter((result) => result.failed).length;
       if (failedCourses === courses.length) {
-        throw new Error("LEARN did not allow assignment data to be read.");
+        throw new Error("LEARN did not allow course work to be read.");
       }
 
       const assignments = results.flatMap((result) => result.assignments);
-      await mapWithConcurrency(assignments, 6, async (assignment) => {
+      const assignmentItems = assignments.filter((assignment) => assignment.kind === "assignment");
+      await mapWithConcurrency(assignmentItems, 6, async (assignment) => {
         assignment.submitted = await getAssignmentSubmitted(assignment, versions.le);
       });
       state.assignments = assignments.sort(compareAssignments);
@@ -248,16 +249,46 @@
       }));
   }
 
+  async function getCourseActivities(course, version) {
+    const results = await Promise.allSettled([
+      getCourseAssignments(course, version),
+      getCourseQuizzes(course, version)
+    ]);
+    const available = results
+      .filter((result) => result.status === "fulfilled")
+      .flatMap((result) => result.value);
+    if (!results.some((result) => result.status === "fulfilled")) {
+      throw new Error("Course work could not be loaded.");
+    }
+    return available;
+  }
+
   async function getCourseAssignments(course, version) {
     const folders = await getPagedItems(`/d2l/api/le/${version}/${course.id}/dropbox/folders/`);
     return folders
       .filter((folder) => folder && folder.IsHidden !== true)
       .map((folder) => ({
         id: folder.Id,
+        kind: "assignment",
         name: folder.Name || "Untitled assignment",
         courseId: course.id,
         courseName: course.name,
         dueDate: parseDate(folder.DueDate),
+        submitted: null
+      }));
+  }
+
+  async function getCourseQuizzes(course, version) {
+    const quizzes = await getPagedItems(`/d2l/api/le/${version}/${course.id}/quizzes/`);
+    return quizzes
+      .filter((quiz) => quiz?.QuizId && quiz.IsActive !== false)
+      .map((quiz) => ({
+        id: quiz.QuizId,
+        kind: "quiz",
+        name: quiz.Name || "Untitled quiz",
+        courseId: course.id,
+        courseName: course.name,
+        dueDate: parseDate(quiz.DueDate),
         submitted: null
       }));
   }
@@ -283,6 +314,11 @@
     for (let page = 0; path && page < 50; page += 1) {
       const data = await apiFetch(path);
       if (Array.isArray(data)) return items.concat(data);
+      if (Array.isArray(data.Objects)) {
+        items.push(...data.Objects);
+        path = data.Next || null;
+        continue;
+      }
       items.push(...(data.Items || []));
       const paging = data.PagingInfo;
       path = paging?.HasMoreItems && paging.Bookmark
@@ -382,7 +418,7 @@
     renderMonthCalendar();
 
     if (!state.assignments.length) {
-      message.textContent = "No visible assignments were found in your active courses.";
+      message.textContent = "No visible assignments or quizzes were found in your active courses.";
       return;
     }
 
@@ -429,7 +465,7 @@
 
       const course = document.createElement("span");
       course.className = "uw-learn-course";
-      course.textContent = assignment.courseName;
+      course.textContent = `${activityKindLabel(assignment)} · ${assignment.courseName}`;
       const date = document.createElement("span");
       date.className = "uw-learn-date";
       date.textContent = assignment.dueDate ? formatDueDate(assignment.dueDate) : "No due date";
@@ -597,6 +633,7 @@
         event.className = "uw-learn-month-event";
         event.href = assignmentUrl(assignment);
         event.textContent = assignment.name;
+        event.classList.toggle("uw-learn-month-quiz", assignment.kind === "quiz");
         const assignmentKeyValue = assignmentKey(assignment);
         const crossed = state.crossed.has(assignmentKeyValue);
         event.classList.toggle("uw-learn-month-completed", assignment.submitted === true || crossed);
@@ -606,7 +643,7 @@
         );
         const note = state.notes[assignmentKeyValue];
         event.classList.toggle("uw-learn-month-has-note", Boolean(note));
-        event.title = [assignment.courseName, assignment.name, formatDueDate(assignment.dueDate), note ? `Note: ${note}` : ""]
+        event.title = [`${activityKindLabel(assignment)} · ${assignment.courseName}`, assignment.name, formatDueDate(assignment.dueDate), note ? `Note: ${note}` : ""]
           .filter(Boolean)
           .join(" — ");
         cell.append(event);
@@ -646,7 +683,12 @@
   }
 
   function assignmentKey(assignment) {
-    return `${assignment.courseId}:${assignment.id}`;
+    const prefix = assignment.kind === "quiz" ? "quiz:" : "";
+    return `${prefix}${assignment.courseId}:${assignment.id}`;
+  }
+
+  function activityKindLabel(assignment) {
+    return assignment.kind === "quiz" ? "Quiz" : "Assignment";
   }
 
   function dueDetails(date) {
@@ -686,6 +728,13 @@
   }
 
   function assignmentUrl(assignment) {
+    if (assignment.kind === "quiz") {
+      const params = new URLSearchParams({
+        qi: assignment.id,
+        ou: assignment.courseId
+      });
+      return `/d2l/lms/quizzing/user/quiz_summary.d2l?${params}`;
+    }
     const params = new URLSearchParams({
       db: assignment.id,
       grpid: "0",
@@ -748,7 +797,7 @@
       const explanation = document.createElement("p");
       explanation.textContent = "To create and update your private subscribed calendar, the extension sends the following data to its Cloudflare-hosted service:";
       const fields = document.createElement("ul");
-      for (const field of ["Assignment names", "Course names", "Due dates", "Links back to assignments in LEARN"]) {
+      for (const field of ["Assignment and quiz names", "Course names", "Due dates", "Links back to course work in LEARN"]) {
         const item = document.createElement("li");
         item.textContent = field;
         fields.append(item);
@@ -832,12 +881,20 @@
     }
   }
 
+  function calendarActivityId(assignment) {
+    return assignment.kind === "quiz" ? `quiz-${assignment.id}` : String(assignment.id);
+  }
+
+  function calendarActivityName(assignment) {
+    return assignment.kind === "quiz" ? `Quiz: ${assignment.name}` : assignment.name;
+  }
+
   function calendarAssignments() {
     return state.assignments
       .filter((assignment) => assignment.dueDate)
       .map((assignment) => ({
-        id: assignment.id,
-        name: assignment.name,
+        id: calendarActivityId(assignment),
+        name: calendarActivityName(assignment),
         courseId: assignment.courseId,
         courseName: assignment.courseName,
         dueDate: assignment.dueDate.toISOString(),
@@ -867,11 +924,11 @@
       const startDate = new Date(assignment.dueDate.getTime() - 60 * 60 * 1000);
       return [
         "BEGIN:VEVENT",
-        `UID:${assignment.courseId}-${assignment.id}@learn.uwaterloo.ca`,
+        `UID:${assignment.courseId}-${calendarActivityId(assignment)}@learn.uwaterloo.ca`,
         `DTSTAMP:${generatedAt}`,
         `DTSTART:${formatIcsDate(startDate)}`,
         `DTEND:${formatIcsDate(assignment.dueDate)}`,
-        `SUMMARY:${escapeIcs(`Due: ${assignment.name}`)}`,
+        `SUMMARY:${escapeIcs(`Due: ${calendarActivityName(assignment)}`)}`,
         `DESCRIPTION:${escapeIcs(`Course: ${assignment.courseName}\nOpen in LEARN: ${url}`)}`,
         `URL:${url}`,
         "END:VEVENT"

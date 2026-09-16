@@ -1,6 +1,6 @@
 # Waterloo LEARN Assignment Dashboard
 
-A small browser extension that adds a consolidated assignment and due-date panel to `learn.uwaterloo.ca`.
+A small browser extension that adds a consolidated assignment, quiz, and due-date panel to `learn.uwaterloo.ca`.
 
 The extension uses the authenticated Brightspace API available within your existing LEARN session. It does not ask for, read, or store your Waterloo password.
 
@@ -57,28 +57,28 @@ Temporary Safari extensions may need to be added again after Safari restarts. Ol
 
 ## Behavior
 
-- Loads visible assignments from active course offerings.
-- Sorts assignments by due date and keeps assignments without dates at the bottom.
+- Loads visible assignments and quizzes from active course offerings.
+- Sorts assignments and quizzes by due date and keeps items without dates at the bottom.
 - Labels overdue, due-today, due-tomorrow, upcoming, and submitted work.
 - Detects submissions from the signed-in student's Brightspace assignment history.
-- Provides a **Done** checkbox that crosses out assignments and persists across browser sessions.
-- Saves private manual notes beneath individual assignments in browser storage.
+- Provides a **Done** checkbox that crosses out assignments or quizzes and persists across browser sessions.
+- Saves private manual notes beneath individual assignments or quizzes in browser storage.
 - Switches between the assignment list and a navigable built-in month calendar.
 - Keeps the panel collapsed while navigating between pages inside LEARN.
 - Calculates Today, Tomorrow, and day-count tags without daylight-saving off-by-one errors.
 - Moves submitted and manually crossed-out assignments below remaining work.
 - Excludes completed work from upcoming and overdue counts.
-- Links each item to its assignment page in LEARN.
+- Links each item to its assignment or quiz page in LEARN.
 - Offers separate **iCalendar download** and **Google Calendar** options.
-- Adds each dated assignment as a one-hour block ending at its deadline.
+- Adds each dated assignment or quiz as a one-hour block ending at its deadline.
 - Refreshes only when the panel first loads or when **Refresh** is selected.
 
-If some courses cannot be read, the panel displays the number that failed while still showing assignments from the other courses. Assignments without due dates are not sent to calendars.
+If some courses cannot be read, the panel displays the number that failed while still showing assignments from the other courses. Assignments and quizzes without due dates are not sent to calendars.
 
 ## Dashboard views and notes
 
-- Select **List** to use the assignment checklist, add or edit private notes, and open assignment links.
-- Select **Calendar** to see dated assignments in a month grid. Use **Previous**, **Today**, and **Next** to navigate.
+- Select **List** to use the course-work checklist, add or edit private notes, and open assignment or quiz links.
+- Select **Calendar** to see dated assignments and quizzes in a month grid. Use **Previous**, **Today**, and **Next** to navigate.
 - Notes are stored only in browser extension storage. A gold edge on a calendar event indicates that the assignment has a note; hover over the event to read it.
 - The selected List or Calendar view is restored the next time LEARN opens.
 
@@ -86,7 +86,7 @@ If some courses cannot be read, the panel displays the number that failed while 
 
 Select **Export** in the assignment panel, then choose:
 
-- **iCalendar download** to save every dated assignment in one `.ics` file.
+- **iCalendar download** to save every dated assignment and quiz in one `.ics` file.
 - **Google Calendar** to publish a private calendar feed and open Google Calendar with the subscription ready to add.
 
 The Google option works like UW Flow and does not require Google OAuth. On first use, confirm the prepared calendar inside Google Calendar. The extension updates the same private feed whenever LEARN opens; Google controls how quickly subscribed calendars refresh.
@@ -99,6 +99,12 @@ The `calendar-service` directory contains a Cloudflare Worker and D1 service des
 
 ## Calendar-feed privacy
 
-Before the first hosted calendar upload, the extension displays the data it will send and requires affirmative consent. The service stores assignment names, course names, due dates, and LEARN assignment links. Each feed has a random 192-bit public identifier, and its separate update token remains in browser extension storage. Anyone who obtains the feed URL can read that calendar, so users should treat it as private. Feeds expire one year after their last update and are removed by a daily cleanup job.
+Before the first hosted calendar upload, the extension displays the data it will send and requires affirmative consent. The service stores assignment and quiz names, course names, due dates, and LEARN course-work links. Each feed has a random 192-bit public identifier, and its separate update token remains in browser extension storage. Anyone who obtains the feed URL can read that calendar, so users should treat it as private. Feeds expire one year after their last update and are removed by a daily cleanup job.
 
 See the full [Privacy Policy](PRIVACY.md).
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Gurshaan Gill.

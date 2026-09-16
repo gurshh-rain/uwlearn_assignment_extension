@@ -49,7 +49,7 @@ The health endpoint at `<worker-url>/health` should return `{"ok":true}`.
 - `DELETE /v1/calendars/<feed-id>.ics` deletes a feed when given its update token.
 - A daily scheduled job deletes feeds more than one year after their last update.
 
-The extension stores the feed ID and update token in extension-local storage. The service stores assignment names, course names, due dates, and LEARN links. Feed URLs are unguessable but function as read-access credentials and must remain private.
+The extension stores the feed ID and update token in extension-local storage. The service stores assignment and quiz names, course names, due dates, and LEARN links. Feed URLs are unguessable but function as read-access credentials and must remain private.
 
 ## Verify locally
 

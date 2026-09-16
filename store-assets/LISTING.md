@@ -6,17 +6,17 @@ Waterloo LEARN Assignment Dashboard
 
 ## Short description
 
-View Waterloo LEARN assignments, due dates, submission status, and completion progress in one dashboard.
+View Waterloo LEARN assignments, quizzes, due dates, submission status, and completion progress in one dashboard.
 
 ## Detailed description
 
 Stay on top of Waterloo LEARN without opening every course separately.
 
-Waterloo LEARN Assignment Dashboard adds a compact assignment panel directly to LEARN. It gathers visible assignments from active courses, sorts them by deadline, and highlights overdue and upcoming work.
+Waterloo LEARN Assignment Dashboard adds a compact course-work panel directly to LEARN. It gathers visible assignments and quizzes from active courses, sorts them by deadline, and highlights overdue and upcoming work.
 
 Features:
 
-- Consolidated assignments from active LEARN courses
+- Consolidated assignments and quizzes from active LEARN courses
 - Due dates with overdue, today, tomorrow, and upcoming labels
 - Automatic submitted-status detection
 - Persistent Done checkboxes for manually crossing out work
@@ -46,15 +46,15 @@ Stores manual Done selections, assignment notes, the selected dashboard view, th
 
 ### learn.uwaterloo.ca
 
-Reads courses, visible assignments, due dates, and current-user assignment submission status from Brightspace using the user's existing authenticated session, and renders the dashboard only on Waterloo LEARN.
+Reads courses, visible assignments and quizzes, due dates, and current-user assignment submission status from Brightspace using the user's existing authenticated session, and renders the dashboard only on Waterloo LEARN.
 
 ### uwlearn-calendar-feed.gurshaan1124.workers.dev
 
-After explicit user consent, sends assignment names, course names, due dates, and LEARN assignment links to the extension's hosted service to create and update the private subscribed calendar requested by the user.
+After explicit user consent, sends assignment and quiz names, course names, due dates, and LEARN course-work links to the extension's hosted service to create and update the private subscribed calendar requested by the user.
 
 ## Data-use disclosure
 
-The extension locally handles website content consisting of course and assignment information. Optional calendar publishing transmits assignment names, course names, due dates, and LEARN links to the hosted calendar service. Submission status, manual Done selections, and assignment notes are not uploaded. Data is not sold, used for advertising, or used for unrelated purposes.
+The extension locally handles website content consisting of course, assignment, and quiz information. Optional calendar publishing transmits assignment and quiz names, course names, due dates, and LEARN links to the hosted calendar service. Submission status, manual Done selections, and assignment notes are not uploaded. Data is not sold, used for advertising, or used for unrelated purposes.
 
 Privacy policy URL:
 

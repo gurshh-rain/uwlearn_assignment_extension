@@ -563,6 +563,16 @@
   background: #c9f5d8;
 }
 
+#uw-learn-assignment-dashboard .uw-learn-month-quiz {
+  color: #234d72;
+  background: #e3f1ff;
+  border-left-color: #3d7fb5;
+}
+
+#uw-learn-assignment-dashboard .uw-learn-month-quiz:hover {
+  background: #cee7fb;
+}
+
 #uw-learn-assignment-dashboard .uw-learn-month-overdue {
   color: #8f1d1d;
   background: #fee2e2;
